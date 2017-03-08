@@ -41,9 +41,9 @@ const (
 	// The limit of single entry size (len(key) + len(value)).
 	TxnEntrySizeLimit = 6 * 1024 * 1024
 	// The limit of number of entries in the MemBuffer.
-	TxnEntryCountLimit = 300 * 1000
+	TxnEntryCountLimit = 1000 * 1000
 	// The limit of the sum of all entry size.
-	TxnTotalSizeLimit = 100 * 1024 * 1024
+	TxnTotalSizeLimit = 300 * 1024 * 1024
 )
 
 // Retriever is the interface wraps the basic Get and Seek methods.
