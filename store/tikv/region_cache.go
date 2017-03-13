@@ -336,22 +336,22 @@ func (c *RegionCache) OnRequestFail(ctx *RPCContext) {
 	c.mu.Unlock()
 }
 
-// OnRegionStale removes the old region and inserts new regions into the cache.
-func (c *RegionCache) OnRegionStale(ctx *RPCContext, newRegions []*metapb.Region) error {
+// OnRegionUpdated removes the old region and inserts new regions into the cache.
+func (c *RegionCache) OnRegionUpdated(ctx *RPCContext, newRegions []*kvrpcpb.UpdatedRegion) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.dropRegionFromCache(ctx.Region)
 
-	for _, meta := range newRegions {
+	for _, region := range newRegions {
 		if _, ok := c.pdClient.(*codecPDClient); ok {
-			if err := decodeRegionMetaKey(meta); err != nil {
-				return errors.Errorf("newRegion's range key is not encoded: %v, %v", meta, err)
+			if err := decodeRegionMetaKey(region.Region); err != nil {
+				return errors.Errorf("newRegion's range key is not encoded: %v, %v", region.Region, err)
 			}
 		}
 		region := &Region{
-			meta: meta,
-			peer: meta.Peers[0],
+			meta: region.Region,
+			peer: region.Leader,
 		}
 		region.SwitchPeer(ctx.KVCtx.GetPeer().GetStoreId())
 		c.insertRegionToCache(region)

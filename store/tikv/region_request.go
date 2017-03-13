@@ -80,6 +80,13 @@ func (s *RegionRequestSender) SendKVReq(req *kvrpcpb.Request, regionID RegionVer
 			continue
 		}
 
+		if updateRegions := resp.GetUpdatedRegions(); len(updateRegions) > 0 {
+			err = s.regionCache.OnRegionUpdated(ctx, updateRegions)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+		}
+
 		if regionErr := resp.GetRegionError(); regionErr != nil {
 			retry, err := s.onRegionError(ctx, regionErr)
 			if err != nil {
@@ -121,6 +128,13 @@ func (s *RegionRequestSender) SendCopReq(req *coprocessor.Request, regionID Regi
 		}
 		if retry {
 			continue
+		}
+
+		if updateRegions := resp.GetUpdatedRegions(); len(updateRegions) > 0 {
+			err = s.regionCache.OnRegionUpdated(ctx, updateRegions)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
 		}
 
 		if regionErr := resp.GetRegionError(); regionErr != nil {
@@ -195,7 +209,6 @@ func (s *RegionRequestSender) onRegionError(ctx *RPCContext, regionErr *errorpb.
 
 	if staleEpoch := regionErr.GetStaleEpoch(); staleEpoch != nil {
 		log.Debugf("tikv reports `StaleEpoch`, ctx: %s, retry later", ctx.KVCtx)
-		err = s.regionCache.OnRegionStale(ctx, staleEpoch.NewRegions)
 		return false, errors.Trace(err)
 	}
 	if regionErr.GetServerIsBusy() != nil {

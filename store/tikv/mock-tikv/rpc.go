@@ -47,8 +47,9 @@ func newRPCHandler(cluster *Cluster, mvccStore *MvccStore, storeID uint64) *rpcH
 
 func (h *rpcHandler) handleRequest(req *kvrpcpb.Request) *kvrpcpb.Response {
 	var resp kvrpcpb.Response
-	if err := h.checkContext(req.GetContext()); err != nil {
+	if err, updatedRegions := h.checkContext(req.GetContext()); err != nil {
 		resp.RegionError = err
+		resp.UpdatedRegions = updatedRegions
 		return &resp
 	}
 	// TiKV has a limitation on raft log size.
@@ -88,13 +89,13 @@ func (h *rpcHandler) handleRequest(req *kvrpcpb.Request) *kvrpcpb.Response {
 	return &resp
 }
 
-func (h *rpcHandler) checkContext(ctx *kvrpcpb.Context) *errorpb.Error {
+func (h *rpcHandler) checkContext(ctx *kvrpcpb.Context) (*errorpb.Error, []*kvrpcpb.UpdatedRegion) {
 	ctxPear := ctx.GetPeer()
 	if ctxPear != nil && ctxPear.GetStoreId() != h.storeID {
 		return &errorpb.Error{
 			Message:       proto.String("store not match"),
 			StoreNotMatch: &errorpb.StoreNotMatch{},
-		}
+		}, nil
 	}
 	region, leaderID := h.cluster.GetRegion(ctx.GetRegionId())
 	// No region found.
@@ -104,7 +105,7 @@ func (h *rpcHandler) checkContext(ctx *kvrpcpb.Context) *errorpb.Error {
 			RegionNotFound: &errorpb.RegionNotFound{
 				RegionId: proto.Uint64(ctx.GetRegionId()),
 			},
-		}
+		}, nil
 	}
 	var storePeer, leaderPeer *metapb.Peer
 	for _, p := range region.Peers {
@@ -122,7 +123,7 @@ func (h *rpcHandler) checkContext(ctx *kvrpcpb.Context) *errorpb.Error {
 			RegionNotFound: &errorpb.RegionNotFound{
 				RegionId: proto.Uint64(ctx.GetRegionId()),
 			},
-		}
+		}, nil
 	}
 	// No leader.
 	if leaderPeer == nil {
@@ -131,7 +132,7 @@ func (h *rpcHandler) checkContext(ctx *kvrpcpb.Context) *errorpb.Error {
 			NotLeader: &errorpb.NotLeader{
 				RegionId: proto.Uint64(ctx.GetRegionId()),
 			},
-		}
+		}, nil
 	}
 	// The Peer on the Store is not leader.
 	if storePeer.GetId() != leaderPeer.GetId() {
@@ -141,24 +142,30 @@ func (h *rpcHandler) checkContext(ctx *kvrpcpb.Context) *errorpb.Error {
 				RegionId: proto.Uint64(ctx.GetRegionId()),
 				Leader:   leaderPeer,
 			},
-		}
+		}, nil
 	}
 	// Region epoch does not match.
 	if !proto.Equal(region.GetRegionEpoch(), ctx.GetRegionEpoch()) {
-		nextRegion, _ := h.cluster.GetRegionByKey(region.GetEndKey())
-		newRegions := []*metapb.Region{region}
-		if nextRegion != nil {
-			newRegions = append(newRegions, nextRegion)
+		updatedRegion := &kvrpcpb.UpdatedRegion{
+			Region: region,
+			Leader: storePeer,
+		}
+		updatedRegions := []*kvrpcpb.UpdatedRegion{updatedRegion}
+
+		if nextRegion, leader := h.cluster.GetRegionByKey(region.GetEndKey()); nextRegion != nil {
+			updatedRegion := &kvrpcpb.UpdatedRegion{
+				Region: nextRegion,
+				Leader: leader,
+			}
+			updatedRegions = append(updatedRegions, updatedRegion)
 		}
 		return &errorpb.Error{
-			Message: proto.String("stale epoch"),
-			StaleEpoch: &errorpb.StaleEpoch{
-				NewRegions: newRegions,
-			},
-		}
+			Message:    proto.String("stale epoch"),
+			StaleEpoch: &errorpb.StaleEpoch{},
+		}, updatedRegions
 	}
 	h.startKey, h.endKey = region.StartKey, region.EndKey
-	return nil
+	return nil, nil
 }
 
 func (h *rpcHandler) checkSize(req *kvrpcpb.Request) *errorpb.Error {
