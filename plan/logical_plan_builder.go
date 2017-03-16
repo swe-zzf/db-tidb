@@ -236,7 +236,6 @@ func (b *planBuilder) buildJoin(join *ast.Join) LogicalPlan {
 		}
 		onCondition := expression.SplitCNFItems(onExpr)
 		joinPlan.attachOnConds(onCondition)
-		printArguments("logical", joinPlan.EqualConditions)
 	} else if joinPlan.JoinType == InnerJoin {
 		joinPlan.cartesianJoin = true
 	}
@@ -1291,10 +1290,6 @@ func (b *planBuilder) buildDelete(delete *ast.DeleteStmt) LogicalPlan {
 	}
 
 	return del
-}
-
-func extractTableOptimizationHint(hints []*ast.TableOptimizerHint) {
-
 }
 
 func extractTableList(node ast.ResultSetNode, input []*ast.TableName) []*ast.TableName {
