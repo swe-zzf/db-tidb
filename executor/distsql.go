@@ -53,10 +53,10 @@ func resultRowToRow(t table.Table, h int64, data []types.Datum, tableAsName *mod
 }
 
 // BaseLookupTableTaskSize represents base number of handles for a lookupTableTask.
-var BaseLookupTableTaskSize = 1024
+var BaseLookupTableTaskSize = 2048
 
 // MaxLookupTableTaskSize represents max number of handles for a lookupTableTask.
-var MaxLookupTableTaskSize = 20480
+var MaxLookupTableTaskSize = 40960
 
 // LookupTableTaskChannelSize represents the channel size of the index double read taskChan.
 var LookupTableTaskChannelSize = 50
