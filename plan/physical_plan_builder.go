@@ -587,8 +587,10 @@ func constructPropertyByJoin(join *Join) ([][]*requiredProperty, error) {
 			result = append(result, []*requiredProperty{generateJoinProp(lColumn, false),
 				generateJoinProp(rColumn, false)})
 
-			result = append(result, []*requiredProperty{generateJoinProp(lColumn, true),
-				generateJoinProp(rColumn, true)})
+			/*
+				result = append(result, []*requiredProperty{generateJoinProp(lColumn, true),
+					generateJoinProp(rColumn, true)})
+			*/
 		} else {
 			continue
 		}
