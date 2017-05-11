@@ -68,7 +68,7 @@ func (c *rpcClient) SendCopReq(ctx goctx.Context, addr string, req *coprocessor.
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errors.Trace(ctx.Err())
 	default:
 	}
 

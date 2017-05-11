@@ -161,8 +161,6 @@ func (s *RegionRequestSender) sendCopReqToRegion(ctx *RPCContext, req *coprocess
 }
 
 func (s *RegionRequestSender) onSendFail(ctx *RPCContext, err error) error {
-	log.Warning("RegionRequest send fail:", errors.ErrorStack(err))
-	s.regionCache.OnRequestFail(ctx)
 
 	// Retry on request failure when it's not Cancelled.
 	// When a store is not available, the leader of related region should be elected quickly.
@@ -170,6 +168,9 @@ func (s *RegionRequestSender) onSendFail(ctx *RPCContext, err error) error {
 	// when some unrecoverable disaster happened.
 	if errors.Cause(err) != goctx.Canceled {
 		err = s.bo.Backoff(boTiKVRPC, errors.Errorf("send tikv request error: %v, ctx: %s, try next peer later", err, ctx.KVCtx))
+
+		log.Warning("RegionRequest send fail:", errors.ErrorStack(err))
+		s.regionCache.OnRequestFail(ctx)
 	}
 	return errors.Trace(err)
 }
