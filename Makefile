@@ -106,14 +106,14 @@ test: checklist gotest
 gotest: parserlib
 ifeq ("$(TRAVIS_COVERAGE)", "1")
 	@echo "Running in TRAVIS_COVERAGE mode."
-	@export log_level=error; \
+	@export log_level=info; \
 	go get github.com/go-playground/overalls
 	go get github.com/mattn/goveralls
 	$(OVERALLS) -project=github.com/pingcap/tidb -covermode=count -ignore='.git,_vendor'
 	$(GOVERALLS) -service=travis-ci -coverprofile=overalls.coverprofile
 else
 	@echo "Running in native mode."
-	@export log_level=error; \
+	@export log_level=info; \
 	$(GOTEST) -cover $(PACKAGES)
 endif
 

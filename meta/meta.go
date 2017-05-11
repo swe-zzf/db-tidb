@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/ngaut/log"
 	"github.com/pingcap/tidb/kv"
 	"github.com/pingcap/tidb/model"
 	"github.com/pingcap/tidb/mysql"
@@ -653,11 +654,13 @@ var (
 
 // UpdateBgJob updates the background job with index.
 func (m *Meta) UpdateBgJob(index int64, job *model.Job) error {
+	log.Warnf("update bg job key %v", mBgJobListKey)
 	return m.updateDDLJob(index, job, mBgJobListKey)
 }
 
 // GetBgJob returns the background job with index.
 func (m *Meta) GetBgJob(index int64) (*model.Job, error) {
+	log.Warnf("get bg job key %v", mBgJobListKey)
 	job, err := m.getDDLJob(mBgJobListKey, index)
 
 	return job, errors.Trace(err)
@@ -665,6 +668,7 @@ func (m *Meta) GetBgJob(index int64) (*model.Job, error) {
 
 // EnQueueBgJob adds a background job to the list.
 func (m *Meta) EnQueueBgJob(job *model.Job) error {
+	log.Warnf("put bg job key %v", mBgJobListKey)
 	return m.enQueueDDLJob(mBgJobListKey, job)
 }
 

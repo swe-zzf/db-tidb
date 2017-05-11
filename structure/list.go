@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 
 	"github.com/juju/errors"
+	"github.com/ngaut/log"
 	"github.com/pingcap/tidb/kv"
 	"github.com/pingcap/tidb/terror"
 )
@@ -54,6 +55,7 @@ func (t *TxStructure) listPush(key []byte, left bool, values ...[]byte) error {
 	if len(values) == 0 {
 		return nil
 	}
+	log.Infof("list push key %v, val %v", key, values)
 
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
@@ -72,11 +74,15 @@ func (t *TxStructure) listPush(key []byte, left bool, values ...[]byte) error {
 		}
 
 		dataKey := t.encodeListDataKey(key, index)
+		log.Infof("list push key %v, val %v, meta key %v, data key %v, index %v",
+			key, values, metaKey, dataKey, index)
 		if err = t.readWriter.Set(dataKey, v); err != nil {
 			return errors.Trace(err)
 		}
 	}
 
+	log.Infof("list push key %v, val %v, meta key %v, meta %v",
+		key, values, metaKey, meta)
 	return t.readWriter.Set(metaKey, meta.Value())
 }
 
@@ -148,7 +154,10 @@ func (t *TxStructure) LIndex(key []byte, index int64) ([]byte, error) {
 	index = adjustIndex(index, meta.LIndex, meta.RIndex)
 
 	if index >= meta.LIndex && index < meta.RIndex {
-		return t.reader.Get(t.encodeListDataKey(key, index))
+		dataKey := t.encodeListDataKey(key, index)
+		ret, err := t.reader.Get(dataKey)
+		log.Warnf("index meta key %v, data key %v, ret %v, err %v", metaKey, dataKey, ret, err)
+		return ret, errors.Trace(err)
 	}
 	return nil, nil
 }
@@ -195,6 +204,7 @@ func (t *TxStructure) LClear(key []byte) error {
 
 func (t *TxStructure) loadListMeta(metaKey []byte) (listMeta, error) {
 	v, err := t.reader.Get(metaKey)
+	log.Infof("load list meta key %v, v %v, err %v", metaKey, v, err)
 	if terror.ErrorEqual(err, kv.ErrNotExist) {
 		err = nil
 	} else if err != nil {
@@ -202,6 +212,7 @@ func (t *TxStructure) loadListMeta(metaKey []byte) (listMeta, error) {
 	}
 
 	meta := listMeta{0, 0}
+	log.Infof("load list meta 000 %v, v %v, err %v", meta, v, err)
 	if v == nil {
 		return meta, nil
 	}
@@ -212,6 +223,7 @@ func (t *TxStructure) loadListMeta(metaKey []byte) (listMeta, error) {
 
 	meta.LIndex = int64(binary.BigEndian.Uint64(v[0:8]))
 	meta.RIndex = int64(binary.BigEndian.Uint64(v[8:16]))
+	log.Infof("load list meta === %v, v %v, err %v", meta, v, err)
 	return meta, nil
 }
 

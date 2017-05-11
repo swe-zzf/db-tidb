@@ -17,6 +17,7 @@ import (
 	"bytes"
 
 	"github.com/juju/errors"
+	"github.com/ngaut/log"
 )
 
 // UnionStore is a store that wraps a snapshot for read and a BufferStore for buffered write.
@@ -111,6 +112,7 @@ func (lmb *lazyMemBuffer) Set(key Key, value []byte) error {
 	if lmb.mb == nil {
 		lmb.mb = NewMemDbBuffer()
 	}
+	log.Warnf("lazy set key %v, val %v", key, value)
 
 	return lmb.mb.Set(key, value)
 }
@@ -154,6 +156,7 @@ func (lmb *lazyMemBuffer) Len() int {
 // Get implements the Retriever interface.
 func (us *unionStore) Get(k Key) ([]byte, error) {
 	v, err := us.MemBuffer.Get(k)
+	log.Warnf("union store key %v, v %v, err %v", k, v, err)
 	if IsErrNotFound(err) {
 		if _, ok := us.opts.Get(PresumeKeyNotExists); ok {
 			e, ok := us.opts.Get(PresumeKeyNotExistsError)
@@ -167,6 +170,7 @@ func (us *unionStore) Get(k Key) ([]byte, error) {
 	}
 	if IsErrNotFound(err) {
 		v, err = us.BufferStore.r.Get(k)
+		log.Warnf("2 union store key %v, v %v, err %v", k, v, err)
 	}
 	if err != nil {
 		return v, errors.Trace(err)
@@ -195,6 +199,7 @@ func (us *unionStore) CheckLazyConditionPairs() error {
 	keys := make([]Key, 0, len(us.lazyConditionPairs))
 	for _, v := range us.lazyConditionPairs {
 		keys = append(keys, v.key)
+		log.Warnf("check lazy key %v, val %v", v.key, v)
 	}
 	values, err := us.snapshot.BatchGet(keys)
 	if err != nil {
@@ -204,13 +209,16 @@ func (us *unionStore) CheckLazyConditionPairs() error {
 	for k, v := range us.lazyConditionPairs {
 		if len(v.value) == 0 {
 			if _, exist := values[k]; exist {
+				log.Warnf(".... check lazy key %v, val %v, err %v", k, v, v.err)
 				return errors.Trace(v.err)
 			}
 		} else {
 			if bytes.Compare(values[k], v.value) != 0 {
+				log.Warnf(".... check lazy key %v, val %v, err %v", k, v, ErrLazyConditionPairsNotMatch)
 				return errors.Trace(ErrLazyConditionPairsNotMatch)
 			}
 		}
+		log.Warnf(".... check lazy key %v, val %v", k, v)
 	}
 	return nil
 }
