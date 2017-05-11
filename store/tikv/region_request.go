@@ -161,6 +161,7 @@ func (s *RegionRequestSender) sendCopReqToRegion(ctx *RPCContext, req *coprocess
 }
 
 func (s *RegionRequestSender) onSendFail(ctx *RPCContext, err error) error {
+	log.Warning("RegionRequest send fail:", errors.ErrorStack(err))
 	s.regionCache.OnRequestFail(ctx)
 
 	// Retry on request failure when it's not Cancelled.
