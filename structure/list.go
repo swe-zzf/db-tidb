@@ -74,14 +74,14 @@ func (t *TxStructure) listPush(key []byte, left bool, values ...[]byte) error {
 		}
 
 		dataKey := t.encodeListDataKey(key, index)
-		log.Infof("list push key %v, val %v, meta key %v, data key %v, index %v",
+		log.Infof("mid...list push key %v, val %v, meta key %v, data key %v, index %v",
 			key, values, metaKey, dataKey, index)
 		if err = t.readWriter.Set(dataKey, v); err != nil {
 			return errors.Trace(err)
 		}
 	}
 
-	log.Infof("list push key %v, val %v, meta key %v, meta %v",
+	log.Infof("end...list push key %v, val %v, meta key %v, meta %v",
 		key, values, metaKey, meta)
 	return t.readWriter.Set(metaKey, meta.Value())
 }
@@ -102,6 +102,7 @@ func (t *TxStructure) listPop(key []byte, left bool) ([]byte, error) {
 	}
 	metaKey := t.encodeListMetaKey(key)
 	meta, err := t.loadListMeta(metaKey)
+	log.Infof("list pop meta key %v, meta %v, err %v", metaKey, meta, err)
 	if err != nil || meta.IsEmpty() {
 		return nil, errors.Trace(err)
 	}
@@ -117,6 +118,8 @@ func (t *TxStructure) listPop(key []byte, left bool) ([]byte, error) {
 
 	dataKey := t.encodeListDataKey(key, index)
 
+	log.Infof("mid...list pop meta key %v, meta %v, data key %v, index %v",
+		metaKey, meta, dataKey, index)
 	var data []byte
 	data, err = t.reader.Get(dataKey)
 	if err != nil {
@@ -133,6 +136,7 @@ func (t *TxStructure) listPop(key []byte, left bool) ([]byte, error) {
 		err = t.readWriter.Delete(metaKey)
 	}
 
+	log.Infof("end...list pop meta key %v, meta %v, data key %v", metaKey, meta, dataKey)
 	return data, errors.Trace(err)
 }
 

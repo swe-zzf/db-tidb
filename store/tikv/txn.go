@@ -135,10 +135,12 @@ func (txn *tikvTxn) Commit() error {
 	start := time.Now()
 	defer func() { txnCmdHistogram.WithLabelValues("commit").Observe(time.Since(start).Seconds()) }()
 
+	log.Infof("commit, check pairs txn %v", txn.StartTS())
 	if err := txn.us.CheckLazyConditionPairs(); err != nil {
 		return errors.Trace(err)
 	}
 
+	log.Infof("commit, 2PC txn %v", txn.StartTS())
 	committer, err := newTwoPhaseCommitter(txn)
 	if err != nil {
 		return errors.Trace(err)
@@ -153,6 +155,8 @@ func (txn *tikvTxn) Commit() error {
 	}
 	committer.writeFinishBinlog(binlog.BinlogType_Commit, int64(committer.commitTS))
 	txn.commitTS = committer.commitTS
+
+	log.Infof("commit, end txn %v", txn.StartTS())
 	return nil
 }
 

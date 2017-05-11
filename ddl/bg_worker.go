@@ -68,6 +68,7 @@ func (d *ddl) handleBgJobQueue() error {
 	d.hookMu.Lock()
 	d.hook.OnBgJobUpdated(job)
 	d.hookMu.Unlock()
+	log.Errorf("handle bg job succeed")
 
 	return nil
 }

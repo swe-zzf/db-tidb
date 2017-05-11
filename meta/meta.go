@@ -679,6 +679,7 @@ func (m *Meta) BgJobQueueLen() (int64, error) {
 
 // AddHistoryBgJob adds background job to history.
 func (m *Meta) AddHistoryBgJob(job *model.Job) error {
+	log.Warnf("add bg history job key %v", mBgJobListKey)
 	return m.addHistoryDDLJob(mBgJobHistoryKey, job)
 }
 
@@ -689,6 +690,7 @@ func (m *Meta) GetHistoryBgJob(id int64) (*model.Job, error) {
 
 // DeQueueBgJob pops a background job from the list.
 func (m *Meta) DeQueueBgJob() (*model.Job, error) {
+	log.Warnf("del bg job key %v", mBgJobListKey)
 	return m.deQueueDDLJob(mBgJobListKey)
 }
 

@@ -121,6 +121,7 @@ func (lmb *lazyMemBuffer) Delete(k Key) error {
 	if lmb.mb == nil {
 		lmb.mb = NewMemDbBuffer()
 	}
+	log.Warnf("lazy del key %v", k)
 
 	return lmb.mb.Delete(k)
 }
@@ -156,7 +157,7 @@ func (lmb *lazyMemBuffer) Len() int {
 // Get implements the Retriever interface.
 func (us *unionStore) Get(k Key) ([]byte, error) {
 	v, err := us.MemBuffer.Get(k)
-	log.Warnf("union store key %v, v %v, err %v", k, v, err)
+	log.Warnf("get key %v, v %v, err %v", k, v, err)
 	if IsErrNotFound(err) {
 		if _, ok := us.opts.Get(PresumeKeyNotExists); ok {
 			e, ok := us.opts.Get(PresumeKeyNotExistsError)
@@ -170,7 +171,7 @@ func (us *unionStore) Get(k Key) ([]byte, error) {
 	}
 	if IsErrNotFound(err) {
 		v, err = us.BufferStore.r.Get(k)
-		log.Warnf("2 union store key %v, v %v, err %v", k, v, err)
+		log.Warnf("2...get union store key %v, v %v, err %v", k, v, err)
 	}
 	if err != nil {
 		return v, errors.Trace(err)
@@ -197,6 +198,7 @@ func (us *unionStore) CheckLazyConditionPairs() error {
 		return nil
 	}
 	keys := make([]Key, 0, len(us.lazyConditionPairs))
+	log.Warnf("check lazy key count %v", len(keys))
 	for _, v := range us.lazyConditionPairs {
 		keys = append(keys, v.key)
 		log.Warnf("check lazy key %v, val %v", v.key, v)

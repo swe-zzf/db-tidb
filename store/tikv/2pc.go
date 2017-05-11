@@ -90,12 +90,14 @@ func newTwoPhaseCommitter(txn *tikvTxn) (*twoPhaseCommitter, error) {
 				Value: v,
 			}
 			putCnt++
+			log.Infof("2PC put key %v, txn %v", k, txn.StartTS())
 		} else {
 			mutations[string(k)] = &pb.Mutation{
 				Op:  pb.Op_Del,
 				Key: k,
 			}
 			delCnt++
+			log.Infof("2PC del key %v, txn %v", k, txn.StartTS())
 		}
 		keys = append(keys, k)
 		entrySize := len(k) + len(v)
