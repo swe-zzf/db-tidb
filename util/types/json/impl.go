@@ -14,41 +14,119 @@
 package json
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"strings"
+
+	"github.com/pingcap/tidb/util/hack"
 )
 
-var _ JSON = &jsonImpl{}
-
-type jsonImpl struct {
-	json interface{}
-}
-
-// ParseFromString implements JSON interface.
-func (j *jsonImpl) ParseFromString(s string) (err error) {
+func parseFromString(s string) (JSON, error) {
 	if len(s) == 0 {
-		return ErrInvalidJSONText.GenByArgs("The document is empty")
+		return nil, ErrInvalidJSONText.GenByArgs("The document is empty")
 	}
-	err = json.Unmarshal([]byte(s), &j.json)
-	if err != nil {
-		return ErrInvalidJSONText.GenByArgs(err)
+	var in interface{}
+	if err := json.Unmarshal([]byte(s), &in); err != nil {
+		return nil, ErrInvalidJSONText.GenByArgs(err)
 	}
-	return err
+	if j, ok := in.(JSON); ok {
+		return j, nil
+	} else {
+		return nil, ErrInvalidJSONText.GenByArgs(s)
+	}
 }
 
-// DumpToString implements JSON interface.
-func (j *jsonImpl) DumpToString() string {
-	bytes, _ := json.Marshal(j.json)
+func dumpToString(j JSON) string {
+	bytes, _ := json.Marshal(j)
 	return strings.Trim(string(bytes), "\n")
 }
 
-// Serialize implements JSON interface.
-func (j *jsonImpl) Serialize() []byte {
-	ret, _ := serialize(j.json)
-	return ret
+type jsonBool bool
+type jsonString string
+type jsonObject map[string]JSON
+type jsonArray []JSON
+type jsonDouble float64
+
+func serialize(j JSON) []byte {
+	if j == nil {
+		return []byte{0x04, 0x00}
+	}
+	var buffer = new(bytes.Buffer)
+	buffer.WriteByte(j.getTypeCode())
+	j.writeBinaryRepresentation(buffer)
+	return buffer.Bytes()
 }
 
-// Deserialize implements JSON interface.
-func (j *jsonImpl) Deserialize(bytes []byte) {
-	j.json, _ = deserialize(bytes)
+func deserialize(data []byte) JSON {
+	if data[0] == 0x04 && data[1] == 0x00 {
+		return nil
+	}
+	return nil
+	// return pop(data[0], data[1:])
 }
+
+func (b *jsonBool) getTypeCode() byte {
+	return 0x04
+}
+
+func (b *jsonBool) writeBinaryRepresentation(buffer *bytes.Buffer) {
+	if *b {
+		buffer.WriteByte(0x01)
+	} else {
+		buffer.WriteByte(0x02)
+	}
+}
+
+func (b *jsonBool) readBinaryRepresentation(data []byte) {
+	*b = data[0] == 0x01
+}
+
+func (f *jsonDouble) getTypeCode() byte {
+	return 0x0b
+}
+
+func (f *jsonDouble) writeBinaryRepresentation(buffer *bytes.Buffer) {
+	binary.Write(buffer, binary.LittleEndian, *f)
+}
+
+func (f *jsonDouble) readBinaryRepresentation(data []byte) {
+	var reader = bytes.NewReader(data)
+	binary.Read(reader, binary.LittleEndian, f)
+}
+
+func (s *jsonString) getTypeCode() byte {
+	return 0x0c
+}
+
+func (s *jsonString) writeBinaryRepresentation(buffer *bytes.Buffer) {
+	var ss = string(*s)
+	var varIntBuf = make([]byte, 9)
+	var varIntLen = binary.PutUvarint(varIntBuf, uint64(len(hack.Slice(ss))))
+	buffer.Write(varIntBuf[0:varIntLen])
+	buffer.Write(hack.Slice(ss))
+}
+
+func (s *jsonString) readBinaryRepresentation(data []byte) {
+	var reader = bytes.NewReader(data)
+	length, _ := binary.ReadUvarint(reader)
+	var buf = make([]byte, length)
+	reader.Read(buf)
+	*s = jsonString(string(buf))
+}
+
+// func (m *map[string]JSON) getTypeCode() {
+// 	return 0x01
+// }
+//
+// func (m *map[string]JSON) writeBinaryRepresentation(buffer *bytes.Buffer) {
+// 	pushObject(buffer, m)
+// }
+//
+// func (a *[]JSON) getTypeCode() {
+// 	return 0x03
+// }
+//
+// func (a *[]JSON) writeBinaryRepresentation(buffer *bytes.Buffer) {
+// 	pushArray(buffer, a)
+// }
