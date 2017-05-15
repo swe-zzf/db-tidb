@@ -689,6 +689,8 @@ func (cc *clientConn) handleQuery(sql string) (err error) {
 		}
 		err = cc.writeOK()
 	}
+	// Cancel the running goroutines.
+	cc.ctx.Cancel()
 	return errors.Trace(err)
 }
 
