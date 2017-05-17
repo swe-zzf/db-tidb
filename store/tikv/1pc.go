@@ -15,22 +15,22 @@ package tikv
 
 import (
 	"sync/atomic"
+	"fmt"
+
 	"github.com/juju/errors"
 	"github.com/ngaut/log"
 	pb "github.com/pingcap/kvproto/pkg/kvrpcpb"
 	"github.com/pingcap/tidb/kv"
 	"github.com/pingcap/tidb/tablecodec"
-	goctx "golang.org/x/net/context"
-	"fmt"
+	"github.com/pingcap/tipb/go-binlog"
+	"github.com/pingcap/tidb/sessionctx/binloginfo"
+	 goctx "golang.org/x/net/context"
 )
 
 // twoPhaseCommitter executes a two-phase commit protocol.
 type onePhaseCommitter struct {
-	store     *tikvStore
-	txn       *tikvTxn
+	Commiter
 	commitTS   uint64
-	keys      [][]byte
-	mutations map[string]*pb.Mutation
 }
 
 // newOnePhaseCommitter creates a oneTwoPhaseCommitter.
@@ -84,11 +84,13 @@ func newOnePhaseCommitter(txn *tikvTxn) (*onePhaseCommitter, error) {
 	txnWriteSizeHistogram.Observe(float64(size / 1024))
 
 	return &onePhaseCommitter{
-		store:     txn.store,
-		txn:       txn,
+		Commiter:Commiter{
+			store:     txn.store,
+			txn:       txn,
+			keys:      keys,
+			mutations: mutations,
+		},
 		commitTS:   txn.StartTS(),
-		keys:      keys,
-		mutations: mutations,
 	}, nil
 }
 
@@ -114,11 +116,7 @@ func (c onePhaseCommitter)commit_keys(bo *Backoffer, keys [][]byte) error {
 	for id, g := range groups {
 		batches = appendBatchBySize(batches, id, g, sizeFunc, txnCommitBatchSize)
 	}
-
 	err = c.doCommitOnBatches(bo, batches)
-	if err == nil {
-		c.txn.commitTS = c.commitTS
-	}
 	return errors.Trace(err)
 }
 
@@ -157,7 +155,6 @@ func (c *onePhaseCommitter) importSingleBatch(bo *Backoffer, batch batchKeys) er
 		return nil
 	}
 	return errors.Trace(fmt.Errorf("[1PC] failed with %v",errInfo))
-
 }
 
 
@@ -186,4 +183,18 @@ func (c onePhaseCommitter)doCommitOnBatches(bo *Backoffer, batches []batchKeys) 
 		}
 	}
 	return errors.Trace(err)
+}
+
+func (c *onePhaseCommitter) writeBinlog() {
+	if !c.shouldWriteBinlog() {
+		return
+	}
+	go func() {
+		bin := c.txn.us.GetOption(kv.BinlogData).(*binlog.Binlog)
+		bin.StartTs = int64(c.commitTS)
+		err := binloginfo.WriteBinlog(bin, c.store.clusterID)
+		if err != nil {
+			log.Errorf("failed to write binlog: %v", err)
+		}
+	}()
 }

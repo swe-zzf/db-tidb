@@ -57,13 +57,25 @@ func (ca twoPhaseCommitAction) MetricsTag() string {
 	return "2pc_" + ca.String()
 }
 
-// twoPhaseCommitter executes a two-phase commit protocol.
-type twoPhaseCommitter struct {
+type Commiter struct {
 	store     *tikvStore
 	txn       *tikvTxn
-	startTS   uint64
 	keys      [][]byte
 	mutations map[string]*pb.Mutation
+}
+
+func (c *Commiter) shouldWriteBinlog() bool {
+	if binloginfo.PumpClient == nil {
+		return false
+	}
+	_, ok := c.txn.us.GetOption(kv.BinlogData).(*binlog.Binlog)
+	return ok
+}
+
+// twoPhaseCommitter executes a two-phase commit protocol.
+type twoPhaseCommitter struct {
+	Commiter
+	startTS   uint64
 	lockTTL   uint64
 	commitTS  uint64
 	mu        struct {
@@ -141,11 +153,13 @@ func newTwoPhaseCommitter(txn *tikvTxn) (*twoPhaseCommitter, error) {
 	txnWriteSizeHistogram.Observe(float64(size / 1024))
 
 	return &twoPhaseCommitter{
-		store:     txn.store,
-		txn:       txn,
+		Commiter:Commiter{
+			store:     txn.store,
+			txn:       txn,
+			keys:      keys,
+			mutations: mutations,
+		},
 		startTS:   txn.StartTS(),
-		keys:      keys,
-		mutations: mutations,
 		lockTTL:   txnLockTTL(txn.startTime, size),
 	}, nil
 }
@@ -588,14 +602,6 @@ func (c *twoPhaseCommitter) writeFinishBinlog(tp binlog.BinlogType, commitTS int
 			log.Errorf("failed to write binlog: %v", err)
 		}
 	}()
-}
-
-func (c *twoPhaseCommitter) shouldWriteBinlog() bool {
-	if binloginfo.PumpClient == nil {
-		return false
-	}
-	_, ok := c.txn.us.GetOption(kv.BinlogData).(*binlog.Binlog)
-	return ok
 }
 
 // TiKV recommends each RPC packet should be less than ~1MB. We keep each packet's

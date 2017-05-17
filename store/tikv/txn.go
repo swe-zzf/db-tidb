@@ -142,15 +142,26 @@ func (txn *tikvTxn) Commit() error {
 	// for 1 pc
 	op1PcImport := txn.us.GetOption(kv.OnePcImport)
 	if onePc, ok := op1PcImport.(bool); ok && onePc {
-		log.Debug("[1PC] import txn with commit_ts:",txn.startTS)
-		commiter,err := newOnePhaseCommitter(txn)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		err = commiter.execute()
+		return errors.Trace(txn.onePhaseCommit())
+	}
+	return errors.Trace(txn.twoPhaseCommit())
+}
+
+func (txn *tikvTxn) onePhaseCommit() error {
+	log.Debug("[1PC] import txn with commit_ts:",txn.startTS)
+	commiter,err := newOnePhaseCommitter(txn)
+	if err != nil {
 		return errors.Trace(err)
 	}
+	err = commiter.execute()
+	if err != nil {
+		commiter.writeBinlog()
+		txn.commitTS = commiter.commitTS
+	}
+	return errors.Trace(err)
+}
 
+func (txn *tikvTxn) twoPhaseCommit() error {
 	committer, err := newTwoPhaseCommitter(txn)
 	if err != nil {
 		return errors.Trace(err)
