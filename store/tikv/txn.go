@@ -141,7 +141,8 @@ func (txn *tikvTxn) Commit() error {
 
 	// for 1 pc
 	op1PcImport := txn.us.GetOption(kv.OnePcImport)
-	if skip, ok := op1PcImport.(bool); ok && skip {
+	if onePc, ok := op1PcImport.(bool); ok && onePc {
+		log.Debug("[1PC] import txn with commit_ts:",txn.startTS)
 		commiter,err := newOnePhaseCommitter(txn)
 		if err != nil {
 			return errors.Trace(err)

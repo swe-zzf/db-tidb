@@ -116,6 +116,9 @@ func (c onePhaseCommitter)commit_keys(bo *Backoffer, keys [][]byte) error {
 	}
 
 	err = c.doCommitOnBatches(bo, batches)
+	if err == nil {
+		c.txn.commitTS = c.commitTS
+	}
 	return errors.Trace(err)
 }
 
