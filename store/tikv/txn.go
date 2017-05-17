@@ -139,6 +139,17 @@ func (txn *tikvTxn) Commit() error {
 		return errors.Trace(err)
 	}
 
+	// for 1 pc
+	op1PcImport := txn.us.GetOption(kv.OnePcImport)
+	if skip, ok := op1PcImport.(bool); ok && skip {
+		commiter,err := newOnePhaseCommitter(txn)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		err = commiter.execute()
+		return errors.Trace(err)
+	}
+
 	committer, err := newTwoPhaseCommitter(txn)
 	if err != nil {
 		return errors.Trace(err)

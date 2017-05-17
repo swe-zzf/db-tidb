@@ -103,6 +103,21 @@ func (s *testVarsutilSuite) TestVarsutil(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(val, Equals, "1")
 
+	// Test case for tidb_1pc_import
+	c.Assert(v.OnePCImport, IsFalse)
+	SetSessionSystemVar(v, variable.TiDB1PCImport, types.NewStringDatum("0"))
+	c.Assert(v.OnePCImport, IsFalse)
+	SetSessionSystemVar(v, variable.TiDB1PCImport, types.NewStringDatum("1"))
+	c.Assert(v.OnePCImport, IsTrue)
+	SetSessionSystemVar(v, variable.TiDB1PCImport, types.NewStringDatum("0"))
+	c.Assert(v.OnePCImport, IsFalse)
+
+	// Test case for change TiDB1PCImport session variable.
+	SetSessionSystemVar(v, variable.TiDB1PCImport, types.NewStringDatum("1"))
+	val, err = GetSessionSystemVar(v, variable.TiDB1PCImport)
+	c.Assert(err, IsNil)
+	c.Assert(val, Equals, "1")
+
 	// Test case for get TiDBSkipDDLWait session variable.
 	val, err = GetSessionSystemVar(v, variable.TiDBSkipDDLWait)
 	c.Assert(val, Equals, "0")

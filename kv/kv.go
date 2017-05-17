@@ -31,6 +31,8 @@ const (
 	BinlogData
 	// Skip existing check when "prewrite".
 	SkipCheckForWrite
+	// use 1 pc in transaction when loading data.
+	OnePcImport
 	// SchemaLeaseChecker is used for schema lease check.
 	SchemaLeaseChecker
 )

@@ -128,6 +128,7 @@ const (
 	gcMaxBackoff            = 100000
 	gcResolveLockMaxBackoff = 100000
 	rawkvMaxBackoff         = 15000
+	importMaxBackoff        = 15000
 )
 
 // Backoffer is a utility for retrying queries.

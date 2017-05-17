@@ -123,6 +123,12 @@ func (s *testSuite) TestSetVar(c *C) {
 	c.Assert(vars.SkipConstraintCheck, IsTrue)
 	tk.MustExec("set @@tidb_skip_constraint_check = '0'")
 	c.Assert(vars.SkipConstraintCheck, IsFalse)
+
+	c.Assert(vars.OnePCImport, IsFalse)
+	tk.MustExec("set @@tidb_1pc_import = '1'")
+	c.Assert(vars.OnePCImport, IsTrue)
+	tk.MustExec("set @@tidb_1pc_import = '0'")
+	c.Assert(vars.OnePCImport, IsFalse)
 }
 
 func (s *testSuite) TestSetCharset(c *C) {

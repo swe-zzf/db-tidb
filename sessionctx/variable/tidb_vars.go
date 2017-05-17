@@ -38,6 +38,10 @@ const (
 	// When the value is set to true, unique index constraint is not checked.
 	TiDBSkipConstraintCheck = "tidb_skip_constraint_check"
 
+	// tidb_1pc_import is used to speed up the loading process for loading data from a dump file.
+	// when the value is set to true, transaction will use 1 pc instead of 2 pc.
+	TiDB1PCImport = "tidb_1pc_import"
+
 	// tidb_opt_agg_push_down is used to endable/disable the optimizer rule of aggregation push down.
 	TiDBOptAggPushDown = "tidb_opt_agg_push_down"
 

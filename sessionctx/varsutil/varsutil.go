@@ -119,6 +119,8 @@ func SetSessionSystemVar(vars *variable.SessionVars, name string, value types.Da
 		}
 	case variable.TiDBSkipConstraintCheck:
 		vars.SkipConstraintCheck = tidbOptOn(sVal)
+	case variable.TiDB1PCImport:
+		vars.OnePCImport = tidbOptOn(sVal)
 	case variable.TiDBSkipUTF8Check:
 		vars.SkipUTF8Check = tidbOptOn(sVal)
 	case variable.TiDBSkipDDLWait:
