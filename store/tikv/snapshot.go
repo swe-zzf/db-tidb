@@ -99,8 +99,8 @@ func (s *tikvSnapshot) batchGetKeysByRegions(bo *Backoffer, keys [][]byte, colle
 	ch := make(chan error)
 	for _, batch := range batches {
 		go func(batch batchKeys) {
-			backoffer, cancel := bo.Fork()
-			defer cancel()
+			backoffer, _ := bo.Fork()
+			//defer cancel()
 			ch <- s.batchGetSingleRegion(backoffer, batch, collectF)
 		}(batch)
 	}

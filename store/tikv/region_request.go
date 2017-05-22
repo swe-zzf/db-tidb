@@ -99,8 +99,8 @@ func (s *RegionRequestSender) sendReqToRegion(bo *Backoffer, ctx *RPCContext, re
 	if e := tikvrpc.SetContext(req, ctx.KVCtx); e != nil {
 		return nil, false, errors.Trace(e)
 	}
-	context, cancel := goctx.WithTimeout(bo.ctx, timeout)
-	defer cancel()
+	context, _ := goctx.WithTimeout(bo.ctx, timeout)
+	//defer cancel()
 	resp, err = s.client.SendReq(context, ctx.Addr, req)
 	if err != nil {
 		if e := s.onSendFail(bo, ctx, err); e != nil {

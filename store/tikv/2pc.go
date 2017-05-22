@@ -275,7 +275,7 @@ func (c *twoPhaseCommitter) doActionOnBatches(bo *Backoffer, action twoPhaseComm
 			// Cancel other requests and return the first error.
 			if cancel != nil {
 				log.Debugf("2PC doActionOnBatches %s to cancel other actions, tid: %d", action, c.startTS)
-				cancel()
+				//cancel()
 			}
 			if err == nil {
 				err = e
